@@ -113,34 +113,47 @@ protected:
 };
 
 // Mutable iterator inheriting from ArrayConstIterator
+// Allows modification of elements while retaining all STL compatibility.
+// Uses 'using' declarations to bring base class members into scope for cleaner syntax.
 template <typename T, std::size_t Size>
 class ArrayIterator : public ArrayConstIterator<T, Size>
 {
 public:
-    using MyBase = ArrayConstIterator<T, Size>;
-    using typename MyBase::const_reference;
-    using typename MyBase::difference_type;
-    using typename MyBase::iterator_category;
-    using typename MyBase::pointer;
-    using typename MyBase::reference;
-    using typename MyBase::value_type;
+    using MyBase = ArrayConstIterator<T, Size>; // Alias for base class to simplify usage
 
+    // Inherit common STL-compliant type traits from base iterator
+    using typename MyBase::const_reference;   // Read-only reference type
+    using typename MyBase::difference_type;   // Signed type used for iterator arithmetic
+    using typename MyBase::iterator_category; // Indicates this is a contiguous iterator
+    using typename MyBase::pointer;           // Pointer to element type (T*)
+    using typename MyBase::reference;         // Writable reference to element
+    using typename MyBase::value_type;        // Type of element stored in the container
+
+    // Bring inherited data members into scope (m_ptr, m_offset)
+    using MyBase::m_offset;
+    using MyBase::m_ptr;
+
+    // Default constructor: creates an empty/invalid iterator
     constexpr ArrayIterator() noexcept = default;
 
+    // Constructor: initializes iterator to point to a specific element
     constexpr explicit ArrayIterator(pointer ptr, size_t offset = 0) noexcept
         : MyBase(ptr, offset) {}
 
+    // Dereference: provides writable access to the element
     [[nodiscard]] constexpr reference operator*() const noexcept
     {
         return const_cast<reference>(MyBase::operator*());
     }
 
+    // Prefix increment: moves iterator forward by one
     constexpr ArrayIterator &operator++() noexcept
     {
         MyBase::operator++();
         return *this;
     }
 
+    // Postfix increment: returns current iterator, then advances it
     constexpr ArrayIterator operator++(int) noexcept
     {
         ArrayIterator temp = *this;
@@ -148,12 +161,14 @@ public:
         return temp;
     }
 
+    // Prefix decrement: moves iterator backward by one
     constexpr ArrayIterator &operator--() noexcept
     {
         MyBase::operator--();
         return *this;
     }
 
+    // Postfix decrement: returns current iterator, then retreats it
     constexpr ArrayIterator operator--(int) noexcept
     {
         ArrayIterator temp = *this;
@@ -161,57 +176,67 @@ public:
         return temp;
     }
 
+    // In-place addition: advances iterator by offset
     constexpr ArrayIterator &operator+=(difference_type offset) noexcept
     {
         MyBase::operator+=(offset);
         return *this;
     }
 
+    // In-place subtraction: retreats iterator by offset
     constexpr ArrayIterator &operator-=(difference_type offset) noexcept
     {
         MyBase::operator-=(offset);
         return *this;
     }
 
+    // Three-way comparison: enables use in ordered algorithms (C++20)
     [[nodiscard]] constexpr auto operator<=>(const ArrayIterator &other) const noexcept
     {
         return MyBase::operator<=>(other);
     }
 
+    // Equality comparison: true if iterators point to same location
     [[nodiscard]] constexpr bool operator==(const ArrayIterator &other) const noexcept
     {
         return MyBase::operator==(other);
     }
 
+    // Inequality comparison: negation of equality
     [[nodiscard]] constexpr bool operator!=(const ArrayIterator &other) const noexcept
     {
         return !(*this == other);
     }
 
+    // Arrow operator: provides pointer-style member access
     [[nodiscard]] constexpr pointer operator->() const noexcept
     {
-        return this->m_ptr + this->m_offset;
+        return m_ptr + m_offset;
     }
 
+    // Binary addition: returns new iterator advanced by offset
     [[nodiscard]] constexpr ArrayIterator operator+(difference_type offset) const noexcept
     {
-        return ArrayIterator(this->m_ptr, this->m_offset + offset);
+        return ArrayIterator(m_ptr, m_offset + offset);
     }
 
+    // Unary negation: flips the offset (rarely used)
     [[nodiscard]] constexpr ArrayIterator &operator-() noexcept
     {
-        this->m_offset = -this->m_offset;
+        m_offset = -m_offset;
         return *this;
     }
 
+    // Binary subtraction (iterator - offset): returns new iterator moved back
     [[nodiscard]] constexpr ArrayIterator operator-(difference_type offset) const noexcept
     {
-        return ArrayIterator(this->m_ptr, this->m_offset - offset);
+        return ArrayIterator(m_ptr, m_offset - offset);
     }
 
+    // Iterator difference (iterator - iterator): returns distance between two iterators
     [[nodiscard]] constexpr difference_type operator-(const ArrayIterator &other) const noexcept
     {
-        return static_cast<difference_type>(this->m_offset) - static_cast<difference_type>(other.m_offset);
+        return static_cast<difference_type>(m_offset) - static_cast<difference_type>(other.m_offset);
     }
 };
 
