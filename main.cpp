@@ -1,42 +1,49 @@
 #include <iostream>  // For std::cout
 #include <cstddef>   // For std::size_t
-#include <expected>  // For std::expected / std::unexpected (C++23)
 #include <array>     // For std::array in constructor
 #include <algorithm> // For std::copy
-#include <list>      // For std::list used in other tests
 #include <iterator>  // For iterator tags like std::contiguous_iterator_tag
 
+// Namespace for custom container implementations
 namespace cpp_core::container
 {
 
     // Const iterator class for fixed-size Array
+    // Implements a read-only, contiguous iterator compatible with STL algorithms and iterator traits.
+    // Allows iteration over elements in a fixed-size container (like std::array).
     template <typename T, std::size_t Size>
     class ArrayConstIterator
     {
     public:
-        using iterator_category = std::contiguous_iterator_tag;
-        using value_type = T;
-        using difference_type = std::ptrdiff_t;
-        using pointer = const T *;
-        using const_reference = const T &;
-        using reference = T &;
+        // Type aliases required for STL iterator compliance
+        using iterator_category = std::contiguous_iterator_tag; // (C++20) Indicates that elements are laid out contiguously in memory
+        using value_type = T;                                   // Type of the elements the iterator refers to
+        using difference_type = std::ptrdiff_t;                 // Used for expressing the distance between iterators
+        using pointer = const T *;                              // Raw pointer to const elements
+        using const_reference = const T &;                      // Reference type used for read-only access
+        using reference = T &;                                  // Writable reference (not used in this const iterator)
 
+        // Default constructor: creates an invalid iterator (null pointer, offset 0)
         constexpr ArrayConstIterator() noexcept = default;
 
+        // Constructor: initializes iterator to point to a specific offset within an array
         constexpr explicit ArrayConstIterator(pointer pt, size_t offset = 0) noexcept
             : m_ptr{pt}, m_offset{offset} {}
 
+        // Dereference operator: returns a const reference to the current element
         [[nodiscard]] constexpr const_reference operator*() const noexcept
         {
             return m_ptr[m_offset];
         }
 
+        // Prefix increment: advances iterator to next element, returns *this
         constexpr ArrayConstIterator &operator++() noexcept
         {
             ++m_offset;
             return *this;
         }
 
+        // Postfix increment: returns copy before advancing
         constexpr ArrayConstIterator operator++(int) noexcept
         {
             ArrayConstIterator temp = *this;
@@ -44,12 +51,14 @@ namespace cpp_core::container
             return temp;
         }
 
+        // Prefix decrement: moves iterator to previous element, returns *this
         constexpr ArrayConstIterator &operator--() noexcept
         {
             --m_offset;
             return *this;
         }
 
+        // Postfix decrement: returns copy before retreating
         constexpr ArrayConstIterator operator--(int) noexcept
         {
             ArrayConstIterator temp = *this;
@@ -57,106 +66,117 @@ namespace cpp_core::container
             return temp;
         }
 
+        // Compound addition assignment: move forward by offset
         constexpr ArrayConstIterator &operator+=(difference_type offset) noexcept
         {
             m_offset += offset;
             return *this;
         }
 
+        // Spaceship operator: enables ordering comparisons (e.g., <, >, ==) using C++20 three-way comparison
         [[nodiscard]] constexpr auto operator<=>(const ArrayConstIterator &other) const noexcept
         {
             return m_offset <=> other.m_offset;
         }
 
+        // Equality operator: true if two iterators point to the same logical position
         [[nodiscard]] constexpr bool operator==(const ArrayConstIterator &other) const noexcept
         {
             return (*this <=> other) == 0;
         }
 
+        // Arrow operator: returns pointer to current element (to access member fields)
         [[nodiscard]] constexpr pointer operator->() const noexcept
         {
             return m_ptr + m_offset;
         }
 
+        // Inequality operator: logical negation of equality
         [[nodiscard]] constexpr bool operator!=(const ArrayConstIterator &other) const noexcept
         {
             return !(*this == other);
         }
 
+        // Addition: returns a new iterator advanced by given offset
         [[nodiscard]] constexpr ArrayConstIterator operator+(difference_type offset) const noexcept
         {
             return ArrayConstIterator(m_ptr, m_offset + offset);
         }
 
+        // Subtraction: returns a new iterator retreated by given offset
         [[nodiscard]] constexpr ArrayConstIterator operator-(difference_type offset) const noexcept
         {
             return ArrayConstIterator(m_ptr, m_offset - offset);
         }
 
+        // Compound subtraction assignment: move backward by offset
         constexpr ArrayConstIterator &operator-=(difference_type offset) noexcept
         {
             m_offset -= offset;
             return *this;
         }
 
+        // Unary minus: negates current offset (rarely used, potentially unsafe in real usage)
         [[nodiscard]] constexpr ArrayConstIterator &operator-() noexcept
         {
             m_offset = -m_offset;
             return *this;
         }
 
+        // Difference between two iterators: returns distance (this - other)
         [[nodiscard]] constexpr difference_type operator-(const ArrayConstIterator &other) const noexcept
         {
             return static_cast<difference_type>(m_offset) - static_cast<difference_type>(other.m_offset);
         }
 
     protected:
-        pointer m_ptr{nullptr};
-        size_t m_offset{0};
+        pointer m_ptr{nullptr}; // Pointer to the base of the container’s data
+        size_t m_offset{0};     // Logical offset from base pointer
     };
 
     // Mutable iterator inheriting from ArrayConstIterator
-    // Allows modification of elements while retaining all STL compatibility.
-    // Uses 'using' declarations to bring base class members into scope for cleaner syntax.
+    // Allows element modification and full STL compatibility (e.g., std::copy, std::sort).
+    // All inherited traits and operations are reused, with writable dereference logic added.
     template <typename T, std::size_t Size>
     class ArrayIterator : public ArrayConstIterator<T, Size>
     {
     public:
-        using MyBase = ArrayConstIterator<T, Size>; // Alias for base class to simplify usage
+        using MyBase = ArrayConstIterator<T, Size>; // Alias to simplify references to the base class
 
-        // Inherit common STL-compliant type traits from base iterator
-        using typename MyBase::const_reference;   // Read-only reference type
-        using typename MyBase::difference_type;   // Signed type used for iterator arithmetic
-        using typename MyBase::iterator_category; // Indicates this is a contiguous iterator
-        using typename MyBase::pointer;           // Pointer to element type (T*)
-        using typename MyBase::reference;         // Writable reference to element
-        using typename MyBase::value_type;        // Type of element stored in the container
+        // Inherit STL-compliant iterator traits from the base
+        using typename MyBase::const_reference;   // Read-only reference to element
+        using typename MyBase::difference_type;   // Type used for pointer arithmetic (ptrdiff_t)
+        using typename MyBase::iterator_category; // Declares this a contiguous iterator (C++20)
+        using typename MyBase::pointer;           // Raw pointer type (T*)
+        using typename MyBase::reference;         // Writable reference to element (T&)
+        using typename MyBase::value_type;        // Element type (T)
 
-        // Bring inherited data members into scope (m_ptr, m_offset)
-        using MyBase::m_offset;
-        using MyBase::m_ptr;
+        // Bring protected base class data members into scope to avoid use of `this->`
+        using MyBase::m_offset; // Logical offset from base pointer
+        using MyBase::m_ptr;    // Base pointer to array storage
 
-        // Default constructor: creates an empty/invalid iterator
+        // Default constructor: creates an uninitialized iterator
         constexpr ArrayIterator() noexcept = default;
 
-        // Constructor: initializes iterator to point to a specific element
+        // Construct iterator from raw pointer and offset
         constexpr explicit ArrayIterator(pointer ptr, size_t offset = 0) noexcept
             : MyBase(ptr, offset) {}
 
-        // Dereference: provides writable access to the element
+        // Dereference operator: allows writing to the pointed element
+        // Casts away const-ness because base class only provides read access
         [[nodiscard]] constexpr reference operator*() const noexcept
         {
             return const_cast<reference>(MyBase::operator*());
         }
 
-        // Prefix increment: moves iterator forward by one
+        // Pre-increment: advances iterator by one element
         constexpr ArrayIterator &operator++() noexcept
         {
             MyBase::operator++();
             return *this;
         }
 
-        // Postfix increment: returns current iterator, then advances it
+        // Post-increment: returns current iterator, then advances
         constexpr ArrayIterator operator++(int) noexcept
         {
             ArrayIterator temp = *this;
@@ -164,14 +184,14 @@ namespace cpp_core::container
             return temp;
         }
 
-        // Prefix decrement: moves iterator backward by one
+        // Pre-decrement: moves iterator one element backward
         constexpr ArrayIterator &operator--() noexcept
         {
             MyBase::operator--();
             return *this;
         }
 
-        // Postfix decrement: returns current iterator, then retreats it
+        // Post-decrement: returns current iterator, then decrements
         constexpr ArrayIterator operator--(int) noexcept
         {
             ArrayIterator temp = *this;
@@ -179,146 +199,247 @@ namespace cpp_core::container
             return temp;
         }
 
-        // In-place addition: advances iterator by offset
+        // Compound addition: moves iterator forward by given offset
         constexpr ArrayIterator &operator+=(difference_type offset) noexcept
         {
             MyBase::operator+=(offset);
             return *this;
         }
 
-        // In-place subtraction: retreats iterator by offset
+        // Compound subtraction: moves iterator backward by given offset
         constexpr ArrayIterator &operator-=(difference_type offset) noexcept
         {
             MyBase::operator-=(offset);
             return *this;
         }
 
-        // Three-way comparison: enables use in ordered algorithms (C++20)
+        // Three-way comparison: enables ordered comparisons (e.g., sort)
         [[nodiscard]] constexpr auto operator<=>(const ArrayIterator &other) const noexcept
         {
             return MyBase::operator<=>(other);
         }
 
-        // Equality comparison: true if iterators point to same location
+        // Equality check: true if both iterators point to the same element
         [[nodiscard]] constexpr bool operator==(const ArrayIterator &other) const noexcept
         {
             return MyBase::operator==(other);
         }
 
-        // Inequality comparison: negation of equality
+        // Inequality check: logical negation of equality
         [[nodiscard]] constexpr bool operator!=(const ArrayIterator &other) const noexcept
         {
             return !(*this == other);
         }
 
-        // Arrow operator: provides pointer-style member access
+        // Arrow operator: allows pointer-style access to members of the element
         [[nodiscard]] constexpr pointer operator->() const noexcept
         {
             return m_ptr + m_offset;
         }
 
-        // Binary addition: returns new iterator advanced by offset
+        // Binary addition: returns a new iterator advanced by offset
         [[nodiscard]] constexpr ArrayIterator operator+(difference_type offset) const noexcept
         {
             return ArrayIterator(m_ptr, m_offset + offset);
         }
 
-        // Unary negation: flips the offset (rarely used)
+        // Unary minus: negates offset (uncommon; use with care)
         [[nodiscard]] constexpr ArrayIterator &operator-() noexcept
         {
             m_offset = -m_offset;
             return *this;
         }
 
-        // Binary subtraction (iterator - offset): returns new iterator moved back
+        // Binary subtraction (iterator - offset): returns a new iterator moved back
         [[nodiscard]] constexpr ArrayIterator operator-(difference_type offset) const noexcept
         {
             return ArrayIterator(m_ptr, m_offset - offset);
         }
 
-        // Iterator difference (iterator - iterator): returns distance between two iterators
+        // Iterator difference: computes number of elements between two iterators
         [[nodiscard]] constexpr difference_type operator-(const ArrayIterator &other) const noexcept
         {
             return static_cast<difference_type>(m_offset) - static_cast<difference_type>(other.m_offset);
         }
     };
 
-    // Fixed-size array container
+    // Fixed-size array container similar to std::array
+    // Provides random-access storage and supports both const and mutable iterators
+    // Designed to be STL-compatible using custom iterator types
     template <typename T, std::size_t Size>
     class Array
     {
     public:
-        using value_type = T;
-        using size_type = std::size_t;
-        using reference = T &;
-        using const_reference = const T &;
-        using pointer = T *;
-        using const_iterator = ArrayConstIterator<T, Size>;
-        using iterator = ArrayIterator<T, Size>;
+        // --- Standard container type aliases for consistency with STL ---
 
+        using value_type = T;                               // Type of elements stored in the array
+        using size_type = std::size_t;                      // Type used to express array size and indices
+        using reference = T &;                              // Reference to element (for modification)
+        using const_reference = const T &;                  // Read-only reference to element
+        using pointer = T *;                                // Raw pointer to element
+        using const_iterator = ArrayConstIterator<T, Size>; // Custom const iterator
+        using iterator = ArrayIterator<T, Size>;            // Custom mutable iterator
+
+        // --- Constructors ---
+
+        // Default constructor: value-initializes all elements (zero or default constructed)
         Array() = default;
 
+        // Variadic constructor for in-place initialization of elements
+        // Accepts exactly `Size` arguments that are convertible to T
         template <typename... Values>
         constexpr Array(Values... values)
         {
             static_assert(sizeof...(Values) == Size, "Number of arguments must match array size.");
-            static_assert((std::is_convertible_v<Values, T> && ...), "All Values must be T");
+            static_assert((std::is_convertible_v<Values, T> && ...), "All values must be convertible to T");
+
+            // Use intermediate std::array to perform brace-initialization
             const std::array<T, sizeof...(Values)> temp = {values...};
+
+            // Copy initialized values into internal storage
             std::copy(temp.begin(), temp.end(), m_elements);
         }
 
+        // --- Element Access ---
+
+        // Returns number of elements (known at compile time)
         [[nodiscard]] constexpr size_type size() const noexcept { return Size; }
 
+        // Returns true if array has zero elements (valid for Array<T, 0>)
         constexpr bool empty() const noexcept { return Size == 0; }
 
-        [[nodiscard]] constexpr reference operator[](size_type pos) noexcept { return m_elements[pos]; }
+        // Subscript operator (non-const): read/write access
+        [[nodiscard]] constexpr reference operator[](size_type pos) noexcept
+        {
+            return m_elements[pos];
+        }
 
-        [[nodiscard]] constexpr const_reference operator[](size_type pos) const noexcept { return m_elements[pos]; }
+        // Subscript operator (const): read-only access
+        [[nodiscard]] constexpr const_reference operator[](size_type pos) const noexcept
+        {
+            return m_elements[pos];
+        }
 
+        // --- Iterator Access ---
+
+        // Returns const iterator to beginning of array
         const_iterator begin() const noexcept { return const_iterator(m_elements); }
+
+        // Returns const iterator to one-past-the-end
         const_iterator end() const noexcept { return const_iterator(m_elements, Size); }
 
+        // Returns mutable iterator to beginning of array
         iterator begin() noexcept { return iterator(m_elements); }
+
+        // Returns mutable iterator to one-past-the-end
         iterator end() noexcept { return iterator(m_elements, Size); }
 
     private:
-        T m_elements[Size]{};
+        // Internal storage array: fixed-size, statically allocated
+        T m_elements[Size]{}; // Value-initialized to zero/default
     };
-
 }
+
+// Namespace for custom algorithm implementations
 namespace cpp_core::algorithms
 {
-    // FIXED VERSION: Finds iterator to the maximum element
+    // Finds an iterator to the maximum element in the range [begin, end)
+    // - Returns end if the range is empty
+    // - Uses iterator dereferencing and comparisons (requires operator>)
     template <typename It>
     constexpr It max_element(const It begin, const It end) noexcept
     {
         if (begin == end)
-            return end; // guard for empty range
+            return end; // Guard clause: return early if range is empty
 
-        auto max_it = begin;
+        auto max_it = begin; // Initialize max to the first element
         for (auto it = std::next(begin); it != end; ++it)
         {
-            if (*it > *max_it)
+            if (*it > *max_it) // Compare current element to current max
             {
-                max_it = it;
+                max_it = it; // Update max if current is greater
             }
         }
         return max_it;
     }
+    // Finds an iterator to the minimum element in [begin, end)
+    template <typename It>
+    constexpr It min_element(It begin, It end) noexcept
+    {
+        if (begin == end)
+            return end;
+
+        auto min_it = begin;
+        for (auto it = std::next(begin); it != end; ++it)
+        {
+            if (*it < *min_it)
+            {
+                min_it = it;
+            }
+        }
+        return min_it;
+    }
+
+    // Finds the first element matching a predicate in [begin, end)
+    template <typename It, typename Predicate>
+    constexpr It find_if(It begin, It end, Predicate pred) noexcept
+    {
+        for (auto it = begin; it != end; ++it)
+        {
+            if (pred(*it))
+            {
+                return it;
+            }
+        }
+        return end;
+    }
+
+    // Counts how many elements match a predicate in [begin, end)
+    template <typename It, typename Predicate>
+    constexpr std::size_t count(It begin, It end, Predicate pred) noexcept
+    {
+        std::size_t cnt = 0;
+        for (auto it = begin; it != end; ++it)
+        {
+            if (pred(*it))
+            {
+                ++cnt;
+            }
+        }
+        return cnt;
+    }
 }
+
+// Alias for custom container namespace
 namespace cont = cpp_core::container;
+
+// Alias for custom algorithms namespace
 namespace algo = cpp_core::algorithms;
 
 int main()
 {
+    cont::Array<float, 6> ages = {12.2f, 15.0f, 17.0f, 19.4f, 23.32f, 5.4f};
 
-    cont::Array<float, 5> ages = {12.2f, 15.0f, 17.0f, 19.4f, 23.32f};
+    // Test max_element
+    const auto max_it = algo::max_element(ages.begin(), ages.end());
+    if (max_it != ages.end())
+        std::cout << "Max: " << *max_it << "\n";
 
-    const auto res = algo::max_element(ages.begin(), ages.end());
-    if (res != ages.end())
-        std::cout << "MAX : " << *res << "\n";
-    else
-        std::cout << "Array was empty.\n";
+    // Test min_element
+    const auto min_it = algo::min_element(ages.begin(), ages.end());
+    if (min_it != ages.end())
+        std::cout << "Min: " << *min_it << "\n";
+
+    // Test find_if: find first age > 18
+    const auto found = algo::find_if(ages.begin(), ages.end(), [](float val)
+                                     { return val > 18.0f; });
+    if (found != ages.end())
+        std::cout << "First age > 18: " << *found << "\n";
+
+    // Test count: how many are >= 15
+    std::size_t count_result = algo::count(ages.begin(), ages.end(), [](float val)
+                                           { return val >= 15.0f; });
+    std::cout << "Count of ages >= 15: " << count_result << "\n";
 
     return 0;
 }
