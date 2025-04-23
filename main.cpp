@@ -1,8 +1,6 @@
-#include <iostream>  // For std::cout
-#include <cstddef>   // For std::size_t
-#include <array>     // For std::array in constructor
-#include <algorithm> // For std::copy
-#include <iterator>  // For iterator tags like std::contiguous_iterator_tag
+#include <iostream> // For std::cout
+#include <cstddef>  // For std::size_t, std::ptrdiff_t
+#include <iterator> // For std::next, contiguous_iterator_tag
 
 // Namespace for custom container implementations
 namespace cpp_core::container
@@ -293,13 +291,10 @@ namespace cpp_core::container
             static_assert(sizeof...(Values) == Size, "Number of arguments must match array size.");
             static_assert((std::is_convertible_v<Values, T> && ...), "All values must be convertible to T");
 
-            // Use intermediate std::array to perform brace-initialization
-            const std::array<T, sizeof...(Values)> temp = {values...};
-
-            // Copy initialized values into internal storage
-            std::copy(temp.begin(), temp.end(), m_elements);
+            // Use a fold expression to initialize the internal array
+            size_t index = 0;
+            ((m_elements[index++] = values), ...);
         }
-
         // --- Element Access ---
 
         // Returns number of elements (known at compile time)
