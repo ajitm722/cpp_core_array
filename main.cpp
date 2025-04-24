@@ -1,4 +1,3 @@
-#include <iostream>   // For std::cout
 #include <cstddef>    // For std::size_t, std::ptrdiff_t
 #include <iterator>   // For std::next, contiguous_iterator_tag
 #include <fstream>    // For file I/O
@@ -369,51 +368,58 @@ namespace cpp_core::algorithms
         }
         return max_it;
     }
-    // Finds an iterator to the minimum element in [begin, end)
+
+    // Finds an iterator to the minimum element in the range [begin, end)
+    // - Returns end if the range is empty
+    // - Uses iterator dereferencing and comparisons (requires operator<)
     template <typename It>
-    constexpr It min_element(It begin, It end) noexcept
+    constexpr It min_element(const It begin, const It end) noexcept
     {
         if (begin == end)
-            return end;
+            return end; // Guard clause: return early if range is empty
 
-        auto min_it = begin;
+        auto min_it = begin; // Initialize min to the first element
         for (auto it = std::next(begin); it != end; ++it)
         {
-            if (*it < *min_it)
+            if (*it < *min_it) // Compare current element to current min
             {
-                min_it = it;
+                min_it = it; // Update min if current is smaller
             }
         }
         return min_it;
     }
 
-    // Finds the first element matching a predicate in [begin, end)
+    // Finds the first element matching a predicate in the range [begin, end)
+    // - Returns end if no element matches the predicate
+    // - Requires the predicate to be callable with the dereferenced iterator
     template <typename It, typename Predicate>
-    constexpr It find_if(It begin, It end, Predicate pred) noexcept
+    constexpr It find_if(const It begin, const It end, Predicate pred) noexcept
     {
         for (auto it = begin; it != end; ++it)
         {
-            if (pred(*it))
+            if (pred(*it)) // Check if the predicate is satisfied
             {
-                return it;
+                return it; // Return the iterator to the matching element
             }
         }
-        return end;
+        return end; // Return end if no match is found
     }
 
-    // Counts how many elements match a predicate in [begin, end)
+    // Counts how many elements match a predicate in the range [begin, end)
+    // - Returns the count of elements satisfying the predicate
+    // - Requires the predicate to be callable with the dereferenced iterator
     template <typename It, typename Predicate>
-    constexpr std::size_t count(It begin, It end, Predicate pred) noexcept
+    constexpr std::size_t count(const It begin, const It end, Predicate pred) noexcept
     {
-        std::size_t cnt = 0;
+        std::size_t cnt{0}; // Initialize count to zero
         for (auto it = begin; it != end; ++it)
         {
-            if (pred(*it))
+            if (pred(*it)) // Check if the predicate is satisfied
             {
-                ++cnt;
+                ++cnt; // Increment count for each matching element
             }
         }
-        return cnt;
+        return cnt; // Return the total count
     }
 }
 
@@ -425,7 +431,7 @@ namespace cpp_core::io_operations
     void sendFileDataToAPI(std::string_view filename)
     {
         // Define the chunk size (512 bytes, typical disk sector size)
-        constexpr std::size_t chunk_size = 512;
+        constexpr std::size_t chunk_size{512};
 
         // Create a constexpr Array to hold a chunk of data (512 bytes)
         cpp_core::container::Array<char, chunk_size> buffer;
@@ -487,45 +493,54 @@ namespace cont = cpp_core::container;
 // Alias for custom algorithms namespace
 namespace algo = cpp_core::algorithms;
 
+// Alias for custom I/O operations namespace
+namespace io = cpp_core::io_operations;
+
 int main()
 {
-    constexpr cont::Array<float, 6> ages = {12.2f, 15.0f, 17.0f, 19.4f, 23.32f, 5.4f};
+    {
+        // Test the custom Array container and algorithms
+        constexpr cont::Array<float, 6> ages{12.2f, 15.0f, 17.0f, 19.4f, 23.32f, 5.4f};
 
-    // Test max_element
-    const auto max_it = algo::max_element(ages.begin(), ages.end());
-    if (max_it != ages.end())
-        std::cout << "Max: " << *max_it << "\n";
-    else
-        std::cout << "No maximum element found.\n";
+        // Test max_element
+        const auto max_it{algo::max_element(ages.begin(), ages.end())};
+        if (max_it != ages.end())
+            fmt::print("Max: {}\n", *max_it);
+        else
+            fmt::print("No maximum element found.\n");
 
-    // Test min_element
-    const auto min_it = algo::min_element(ages.begin(), ages.end());
-    if (min_it != ages.end())
-        std::cout << "Min: " << *min_it << "\n";
-    else
-        std::cout << "No minimum element found.\n";
+        // Test min_element
+        const auto min_it{algo::min_element(ages.begin(), ages.end())};
+        if (min_it != ages.end())
+            fmt::print("Min: {}\n", *min_it);
+        else
+            fmt::print("No minimum element found.\n");
 
-    // Test find_if: find first age > 18
-    const auto found = algo::find_if(ages.begin(), ages.end(), [](float val)
-                                     { return val > 18.0f; });
-    if (found != ages.end())
-        std::cout << "First age > 18: " << *found << "\n";
-    else
-        std::cout << "No age > 18 found.\n";
+        // Test find_if: find first age > 18
+        const auto found{algo::find_if(ages.begin(), ages.end(), [](float val)
+                                       { return val > 18.0f; })};
+        if (found != ages.end())
+            fmt::print("First age > 18: {}\n", *found);
+        else
+            fmt::print("No age > 18 found.\n");
 
-    // Test count: how many are >= 15
-    std::size_t count_result = algo::count(ages.begin(), ages.end(), [](float val)
-                                           { return val >= 15.0f; });
-    if (count_result > 0)
-        std::cout << "Count of ages >= 15: " << count_result << "\n";
-    else
-        std::cout << "No ages >= 15 found.\n";
+        // Test count: how many are >= 15
+        const auto count_result{algo::count(ages.begin(), ages.end(), [](float val)
+                                            { return val >= 15.0f; })};
+        if (count_result > 0)
+            fmt::print("Count of ages >= 15: {}\n", count_result);
+        else
+            fmt::print("No ages >= 15 found.\n");
+    }
+    // Test the custom I/O operations
 
     // Test sendFileDataToAPI
-    cpp_core::io_operations::sendFileDataToAPI("test_file.txt");
+    fmt::print("\nReading from test_file.txt:\n");
+    io::sendFileDataToAPI("test_file.txt");
 
     // Test sendFileDataToAPI with test_file2.txt
-    cpp_core::io_operations::sendFileDataToAPI("test_file2.txt");
+    fmt::print("\nReading from test_file2.txt:\n");
+    io::sendFileDataToAPI("test_file2.txt");
 
     return 0;
 }
