@@ -1,8 +1,8 @@
-# cpp_core_project
+# cpp_core_array
 
 ## Overview
 
-This project demonstrates a custom implementation of C++ containers, algorithms, and I/O operations. It is designed to showcase modern C++ features, including C++20 and C++23 standards, and provides a modular structure for reusable components.
+A modern C++ library providing custom fixed-size containers, STL-compatible iterators, and efficient algorithms. Designed for seamless integration into larger projects, it also includes robust file processing utilities with chunked reading capabilities, making it ideal for performance-critical applications.
 
 ### Features
 
