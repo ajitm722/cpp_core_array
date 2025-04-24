@@ -1,0 +1,13 @@
+Line 1: This is a test line to fill the file.
+Line 2: Adding more content to exceed 512 bytes.
+Line 3: Each line contributes to the total size.
+Line 4: This file is used for testing purposes.
+Line 5: The goal is to trigger multiple iterations.
+Line 6: Let's add more lines to ensure the size grows.
+Line 7: Testing the chunked reading functionality.
+Line 8: This line is part of the test data.
+Line 9: Adding more lines to reach the required size.
+Line 10: This should be enough to exceed 512 bytes.
+Line 11: Adding extra lines just to be sure.
+Line 12: Testing the API simulation with this data.
+Line 13: This is the final line of the test file.

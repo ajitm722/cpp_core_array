@@ -1,6 +1,10 @@
-#include <iostream> // For std::cout
-#include <cstddef>  // For std::size_t, std::ptrdiff_t
-#include <iterator> // For std::next, contiguous_iterator_tag
+#include <iostream>   // For std::cout
+#include <cstddef>    // For std::size_t, std::ptrdiff_t
+#include <iterator>   // For std::next, contiguous_iterator_tag
+#include <fstream>    // For file I/O
+#include <string>     // For std::string
+#include <sstream>    // For std::istringstream
+#include <fmt/core.h> // For fmt::print
 
 // Namespace for custom container implementations
 namespace cpp_core::container
@@ -275,6 +279,7 @@ namespace cpp_core::container
         using reference = T &;                              // Reference to element (for modification)
         using const_reference = const T &;                  // Read-only reference to element
         using pointer = T *;                                // Raw pointer to element
+        using const_pointer = const T *;                    // Const raw pointer to element
         using const_iterator = ArrayConstIterator<T, Size>; // Custom const iterator
         using iterator = ArrayIterator<T, Size>;            // Custom mutable iterator
 
@@ -328,6 +333,12 @@ namespace cpp_core::container
 
         // Returns mutable iterator to one-past-the-end
         iterator end() noexcept { return iterator(m_elements, Size); }
+
+        // Returns a mutable pointer to the underlying array storage
+        [[nodiscard]] constexpr pointer data() noexcept { return m_elements; }
+
+        // Returns a const pointer to the underlying array storage
+        [[nodiscard]] constexpr const_pointer data() const noexcept { return m_elements; }
 
     private:
         // Internal storage array: fixed-size, statically allocated
@@ -405,6 +416,72 @@ namespace cpp_core::algorithms
     }
 }
 
+// Namespace for custom I/O implementations
+namespace cpp_core::io_operations
+{
+    // Function to send file data to an API
+    // - Reads the file in chunks of 512 bytes
+    void sendFileDataToAPI(std::string_view filename)
+    {
+        // Define the chunk size (512 bytes, typical disk sector size)
+        constexpr std::size_t chunk_size = 512;
+
+        // Create a constexpr Array to hold a chunk of data (512 bytes)
+        cpp_core::container::Array<char, chunk_size> buffer;
+
+        // Open the file in binary mode
+        std::ifstream file(filename.data(), std::ios::binary);
+        if (!file.is_open())
+        {
+            fmt::print(stderr, "Failed to open the file: {}\n", filename);
+            return;
+        }
+
+        std::string leftover; // To store partial lines between chunks
+
+        // Read the file in chunks
+        while (file.read(buffer.data(), chunk_size) || file.gcount() > 0)
+        {
+            // `file.gcount()`:
+            // - Returns the number of bytes actually read into the buffer.
+            // - This is useful for the last chunk, which may be smaller than `chunk_size`.
+
+            std::size_t bytes_read = file.gcount();
+            fmt::print("Read {} bytes:\n", bytes_read);
+
+            // Combine leftover from the previous chunk with the current chunk
+            std::string chunk_data = leftover + std::string(buffer.data(), bytes_read);
+            leftover.clear(); // Clear leftover as it's now part of chunk_data
+
+            // Convert the chunk into a string stream for line-by-line processing
+            std::istringstream chunk_stream(chunk_data);
+            std::string line{};
+
+            while (std::getline(chunk_stream, line))
+            {
+                if (chunk_stream.eof() && !chunk_data.empty() && chunk_data.back() != '\n')
+                {
+                    // If the line is incomplete (no newline at the end), save it as leftover
+                    leftover = line;
+                }
+                else
+                {
+                    // Otherwise, process the complete line
+                    fmt::print("Sending to API-> {}\n", line);
+                }
+            }
+        }
+
+        // Process any remaining leftover data as the last line
+        if (!leftover.empty())
+        {
+            fmt::print("Sending to API-> {}\n", leftover);
+        }
+
+        // Close the file
+        file.close();
+    }
+}
 // Alias for custom container namespace
 namespace cont = cpp_core::container;
 
@@ -413,28 +490,43 @@ namespace algo = cpp_core::algorithms;
 
 int main()
 {
-    cont::Array<float, 6> ages = {12.2f, 15.0f, 17.0f, 19.4f, 23.32f, 5.4f};
+    constexpr cont::Array<float, 6> ages = {12.2f, 15.0f, 17.0f, 19.4f, 23.32f, 5.4f};
 
     // Test max_element
     const auto max_it = algo::max_element(ages.begin(), ages.end());
     if (max_it != ages.end())
         std::cout << "Max: " << *max_it << "\n";
+    else
+        std::cout << "No maximum element found.\n";
 
     // Test min_element
     const auto min_it = algo::min_element(ages.begin(), ages.end());
     if (min_it != ages.end())
         std::cout << "Min: " << *min_it << "\n";
+    else
+        std::cout << "No minimum element found.\n";
 
     // Test find_if: find first age > 18
     const auto found = algo::find_if(ages.begin(), ages.end(), [](float val)
                                      { return val > 18.0f; });
     if (found != ages.end())
         std::cout << "First age > 18: " << *found << "\n";
+    else
+        std::cout << "No age > 18 found.\n";
 
     // Test count: how many are >= 15
     std::size_t count_result = algo::count(ages.begin(), ages.end(), [](float val)
                                            { return val >= 15.0f; });
-    std::cout << "Count of ages >= 15: " << count_result << "\n";
+    if (count_result > 0)
+        std::cout << "Count of ages >= 15: " << count_result << "\n";
+    else
+        std::cout << "No ages >= 15 found.\n";
+
+    // Test sendFileDataToAPI
+    cpp_core::io_operations::sendFileDataToAPI("test_file.txt");
+
+    // Test sendFileDataToAPI with test_file2.txt
+    cpp_core::io_operations::sendFileDataToAPI("test_file2.txt");
 
     return 0;
 }
