@@ -5,6 +5,7 @@
 #include <string>     // For std::string
 #include <sstream>    // For std::istringstream
 #include <fmt/core.h> // For fmt::print
+#include <tuple>      // For std::tuple
 
 // Namespace for custom container implementations
 namespace cpp_core::container
@@ -454,10 +455,8 @@ namespace cpp_core::io_operations
             leftover.clear(); // Clear leftover as it's now part of chunk_data
 
             // Convert the chunk into a string stream for line-by-line processing
-            std::istringstream chunk_stream(chunk_data);
-            std::string line{};
-
-            while (std::getline(chunk_stream, line))
+            for (auto [chunk_stream, line] = std::tuple{std::istringstream(chunk_data), std::string{}};
+                 std::getline(chunk_stream, line);)
             {
                 if (chunk_stream.eof() && !chunk_data.empty() && chunk_data.back() != '\n')
                 {
