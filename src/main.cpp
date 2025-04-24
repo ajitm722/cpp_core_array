@@ -7,6 +7,14 @@ int main()
         // Test the custom Array container and algorithms
         constexpr cont::Array<float, 6> ages{12.2f, 15.0f, 17.0f, 19.4f, 23.32f, 5.4f};
 
+        // Print the values of the ages array
+        fmt::print("Custom array of Ages: \n");
+        for (const auto &age : ages)
+        {
+            fmt::print("{} ", age);
+        }
+        fmt::print("\n\n");
+
         // Test max_element
         const auto max_it{algo::max_element(ages.begin(), ages.end())};
         if (max_it != ages.end())

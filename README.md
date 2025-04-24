@@ -61,6 +61,9 @@ A modern C++ library providing custom fixed-size containers, STL-compatible iter
    Example output:
 
    ```bash
+   Custom array of Ages: 
+   12.2 15 17 19.4 23.32 5.4 
+
    Max: 23.32
    Min: 5.4
    First age > 18: 19.4
@@ -131,3 +134,42 @@ A modern C++ library providing custom fixed-size containers, STL-compatible iter
   - Simulates sending each line to an API.
 
 ---
+
+## Optimal Chunk Size for File Reading
+
+The default chunk size of 512 bytes used in this project is based on historical disk sector sizes. However, modern systems and storage devices often benefit from larger chunk sizes. Below is a detailed explanation:
+
+### Modern Systems (e.g., SSDs, Advanced HDDs)
+
+- **Recommended Chunk Size**: 4 KiB (4096 bytes) or larger.
+- **Why?**:
+  - Modern drives use 4 KiB physical sectors (Advanced Format), and operating systems typically use 4 KiB or larger file system block sizes.
+  - Reading smaller chunks (e.g., 512 bytes) causes the drive to internally read the full 4 KiB anyway, leading to unnecessary overhead.
+  - Aligning the chunk size with the file system block size (typically 4 KiB(4096 bytes)) ensures that one read operation corresponds to one block, improving efficiency.
+  - [https://github.com/ajitm722/DiskOpsAnalyzer](https://github.com/ajitm722/DiskOpsAnalyzer)
+
+### Constrained Embedded Systems
+
+- **Recommended Chunk Size**: 512 bytes.
+- **Why?**:
+  - Some embedded systems and older storage devices still use 512-byte sectors as the hardware-enforced minimum.
+  - For systems with limited memory or processing power, smaller chunks may be necessary to avoid resource constraints.
+
+### Customization for Your Project
+
+This project can be easily customized to use different chunk sizes based on the target environment:
+
+1. **For Modern Systems**:
+   - Increase the chunk size to 4 KiB or larger depending on filesystem and usecase (e.g., 8 KiB, 16 KiB, 64 KiB).
+   - Modify the buffer size in the `sendFileDataToAPI` function to reflect the new chunk size.
+
+2. **For Embedded Systems**:
+   - Retain the 512-byte chunk size for compatibility with constrained environments.
+
+By default, the project uses 512 bytes for demonstration purposes with custom array.
+
+---
+
+## Acknowledgments
+
+This project was inspired by lectures from the [C++ Global Masterclass](https://cppmasterclass.com.br/En/) by Herik Lima.
