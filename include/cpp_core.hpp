@@ -1,10 +1,8 @@
-#include <cstddef>    // For std::size_t, std::ptrdiff_t
-#include <iterator>   // For std::next, contiguous_iterator_tag
-#include <fstream>    // For file I/O
-#include <string>     // For std::string
-#include <sstream>    // For std::istringstream
-#include <fmt/core.h> // For fmt::print
-#include <tuple>      // For std::tuple
+#pragma once
+
+#include <cstddef>     // For std::size_t, std::ptrdiff_t
+#include <iterator>    // For std::next, contiguous_iterator_tag
+#include <string_view> // For std::string_view
 
 // Namespace for custom container implementations
 namespace cpp_core::container
@@ -423,124 +421,12 @@ namespace cpp_core::algorithms
     }
 }
 
-// Namespace for custom I/O implementations
 namespace cpp_core::io_operations
 {
-    // Function to send file data to an API
-    // - Reads the file in chunks of 512 bytes
-    void sendFileDataToAPI(std::string_view filename)
-    {
-        // Define the chunk size (512 bytes, typical disk sector size)
-        constexpr std::size_t chunk_size{512};
-
-        // Create a constexpr Array to hold a chunk of data (512 bytes)
-        cpp_core::container::Array<char, chunk_size> buffer;
-
-        // Open the file in binary mode
-        std::ifstream file(filename.data(), std::ios::binary);
-        if (!file.is_open())
-        {
-            fmt::print(stderr, "Failed to open the file: {}\n", filename);
-            return;
-        }
-
-        std::string leftover; // To store partial lines between chunks
-
-        // Read the file in chunks
-        while (file.read(buffer.data(), chunk_size) || file.gcount() > 0)
-        {
-            // `file.gcount()`:
-            // - Returns the number of bytes actually read into the buffer.
-            // - This is useful for the last chunk, which may be smaller than `chunk_size`.
-
-            std::size_t bytes_read = file.gcount();
-            fmt::print("Read {} bytes:\n", bytes_read);
-
-            // Combine leftover from the previous chunk with the current chunk
-            std::string chunk_data = leftover + std::string(buffer.data(), bytes_read);
-            leftover.clear(); // Clear leftover as it's now part of chunk_data
-
-            // Convert the chunk into a string stream for line-by-line processing
-            for (auto [chunk_stream, line] = std::tuple{std::istringstream(chunk_data), std::string{}};
-                 std::getline(chunk_stream, line);)
-            {
-                if (chunk_stream.eof() && !chunk_data.empty() && chunk_data.back() != '\n')
-                {
-                    // If the line is incomplete (no newline at the end), save it as leftover
-                    leftover = line;
-                }
-                else
-                {
-                    // Otherwise, process the complete line
-                    fmt::print("Sending to API-> {}\n", line);
-                }
-            }
-        }
-
-        // Process any remaining leftover data as the last line
-        if (!leftover.empty())
-        {
-            fmt::print("Sending to API-> {}\n", leftover);
-        }
-
-        // Close the file
-        file.close();
-    }
+    void sendFileDataToAPI(std::string_view filename);
 }
-// Alias for custom container namespace
+
+// Aliases for namespaces
 namespace cont = cpp_core::container;
-
-// Alias for custom algorithms namespace
 namespace algo = cpp_core::algorithms;
-
-// Alias for custom I/O operations namespace
 namespace io = cpp_core::io_operations;
-
-int main()
-{
-    {
-        // Test the custom Array container and algorithms
-        constexpr cont::Array<float, 6> ages{12.2f, 15.0f, 17.0f, 19.4f, 23.32f, 5.4f};
-
-        // Test max_element
-        const auto max_it{algo::max_element(ages.begin(), ages.end())};
-        if (max_it != ages.end())
-            fmt::print("Max: {}\n", *max_it);
-        else
-            fmt::print("No maximum element found.\n");
-
-        // Test min_element
-        const auto min_it{algo::min_element(ages.begin(), ages.end())};
-        if (min_it != ages.end())
-            fmt::print("Min: {}\n", *min_it);
-        else
-            fmt::print("No minimum element found.\n");
-
-        // Test find_if: find first age > 18
-        const auto found{algo::find_if(ages.begin(), ages.end(), [](float val)
-                                       { return val > 18.0f; })};
-        if (found != ages.end())
-            fmt::print("First age > 18: {}\n", *found);
-        else
-            fmt::print("No age > 18 found.\n");
-
-        // Test count: how many are >= 15
-        const auto count_result{algo::count(ages.begin(), ages.end(), [](float val)
-                                            { return val >= 15.0f; })};
-        if (count_result > 0)
-            fmt::print("Count of ages >= 15: {}\n", count_result);
-        else
-            fmt::print("No ages >= 15 found.\n");
-    }
-    // Test the custom I/O operations
-
-    // Test sendFileDataToAPI
-    fmt::print("\nReading from test_file.txt:\n");
-    io::sendFileDataToAPI("test_file.txt");
-
-    // Test sendFileDataToAPI with test_file2.txt
-    fmt::print("\nReading from test_file2.txt:\n");
-    io::sendFileDataToAPI("test_file2.txt");
-
-    return 0;
-}
