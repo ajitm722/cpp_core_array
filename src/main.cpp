@@ -4,6 +4,9 @@
 int main()
 {
     {
+        // Uncommenting the following line will cause a compile-time error
+        // constexpr cont::Array<float, 6> ages_error{12.2f, 15.0f, 17.0f, 19.4f, 23.32f, "5"};
+
         // Test the custom Array container and algorithms
         constexpr cont::Array<float, 6> ages{12.2f, 15.0f, 17.0f, 19.4f, 23.32f, 5.4f};
 

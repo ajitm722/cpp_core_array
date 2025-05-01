@@ -3,6 +3,7 @@
 #include <cstddef>     // For std::size_t, std::ptrdiff_t
 #include <iterator>    // For std::next, contiguous_iterator_tag
 #include <string_view> // For std::string_view
+#include <concepts>    // For std::convertible_to
 
 // Namespace for custom container implementations
 namespace cpp_core::container
@@ -263,6 +264,13 @@ namespace cpp_core::container
         }
     };
 
+    // --- Custom Concept ---
+    // Define a concept for validating Array construction
+    template <typename T, std::size_t Size, typename... Values>
+    concept ArrayConstructible =
+        (sizeof...(Values) == Size) &&           // Ensure the number of arguments matches the array size
+        (std::convertible_to<Values, T> && ...); // Ensure all arguments are convertible to T
+
     // Fixed-size array container similar to std::array
     // Provides random-access storage and supports both const and mutable iterators
     // Designed to be STL-compatible using custom iterator types
@@ -284,20 +292,15 @@ namespace cpp_core::container
         // --- Constructors ---
 
         // Default constructor: value-initializes all elements (zero or default constructed)
-        Array() = default;
+        constexpr Array() = default;
 
         // Variadic constructor for in-place initialization of elements
-        // Accepts exactly `Size` arguments that are convertible to T
         template <typename... Values>
-        constexpr Array(Values... values)
+            requires ArrayConstructible<T, Size, Values...> // Ensure the number of arguments matches the array size
+        constexpr Array(Values... values) : m_elements{values...}
         {
-            static_assert(sizeof...(Values) == Size, "Number of arguments must match array size.");
-            static_assert((std::is_convertible_v<Values, T> && ...), "All values must be convertible to T");
-
-            // Use a fold expression to initialize the internal array
-            size_t index = 0;
-            ((m_elements[index++] = values), ...);
         }
+
         // --- Element Access ---
 
         // Returns number of elements (known at compile time)
